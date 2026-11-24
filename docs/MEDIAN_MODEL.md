@@ -14,7 +14,7 @@
 - LAST：Call 与 Put 分别使用最新成交价，可能存在成交时间不同步。
 - MID：Call 与 Put 分别取买一/卖一中间价；人工 reportedMid 规则不变。
 
-两种模式分别输出 `rawMedian`、`min`、`max`、`computableCount`、`requestedCount`、`complete`。原始中位数使用可计算档；`validatedMedian` 仅使用质量合格档，两者分开。偶数个可计算值取中间两数的平均作为中位数；零样本返回 null。不会以均值作为回退。
+两种模式分别输出 `rawMean`、`rawMedian`、`min`、`max`、`computableCount`、`requestedCount`、`complete`。旧版对照价取同一组可计算档的算术平均值，单独展示。原始中位数使用可计算档；`validatedMedian` 仅使用质量合格档，两者分开。偶数个可计算值取中间两数的平均作为中位数；零样本返回 null。不会以均值作为回退。
 
 主指标、侧栏、总览和图表均采用中位数。`rawGapBps = 10000*(rawMedian-stockReference)/stockReference`。旧模型历史数据不串入新图表。买一、卖一、自定义期权反推模式停止计算。仍保留原始盘口、合成盘口区间及其风险提示，用于解释价差及数据质量。
 

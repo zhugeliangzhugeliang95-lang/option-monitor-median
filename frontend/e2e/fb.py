@@ -78,7 +78,7 @@ async def main():
       await pg.screenshot(path=S+'manual_panel.png',full_page=True)
       # An empty latest response must not reintroduce removed panels or invalid dates.
       await pg.route('**/api/results/latest',lambda r: r.fulfill(status=200,content_type='application/json',body=json.dumps({})))
-      await pg.get_by_role('button',name='监测总览',exact=True).click();await pg.wait_for_timeout(2500)
+      await pg.get_by_role('button',name='正股反推估值',exact=True).click();await pg.wait_for_timeout(2500)
       txt=await pg.locator('main').inner_text()
       ok('空行情正常且没有退役统计面板','Invalid Date' not in txt and '统计检验' not in txt)
       await pg.screenshot(path=S+'empty_latest.png',full_page=True)

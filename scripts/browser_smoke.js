@@ -19,7 +19,7 @@ async page => {
   if(afterPreview.length!==after.length)throw Error('Preview generated a sample');
   await page.reload();
   await page.getByRole('button',{name:/EXCEL MANUAL/}).click();
-  await page.getByRole('button',{name:'监测总览',exact:true}).click();
+  await page.getByRole('button',{name:'正股反推估值',exact:true}).click();
   await page.getByRole('button',{name:/SPY MOCK/}).click();
   await page.locator('.price-chart .recharts-line').first().waitFor();
   await page.evaluate(()=>window.scrollTo(0,0));

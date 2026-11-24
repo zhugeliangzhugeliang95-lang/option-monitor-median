@@ -6,7 +6,7 @@ from app.engine import compute, summary
 from app.models import NewConfig
 from app.call_comparison import compare_calls
 from app.api import app
-from app.service import create_monitor,save_snapshot
+from app.service import create_monitor,save_snapshot,display_result
 from app.db import Session
 
 STRIKES=(123,124.5,127,129.5,133,134,135)
@@ -28,7 +28,15 @@ def test_user_seven_values_end_to_end(cfg,sample):
         assert a['max']==pytest.approx(131.06)
         assert a['rawGapBps']==pytest.approx(10000*(130.11-130.89)/130.89)
         assert a['complete'] and a['computableCount']==7 and a['validCount']==7
-        assert 'rawMean' not in a
+        assert a['rawMean']==pytest.approx(sum(VALUES)/7)
+
+def test_read_saved_centered_snapshot_with_missing_price():
+    aggregate = dict(rows=[dict(value=12),dict(value=None),dict(value=8)])
+    payload = dict(modelVersion='parity-median-v3-centered', modes={'MID':aggregate})
+    assert display_result(payload)['modes']['MID']['rawMean'] == 10
+    assert 'rawMean' not in aggregate
+    aggregate['rows'] = [dict(value=None)]
+    assert display_result(payload)['modes']['MID']['rawMean'] is None
 
 def test_default_seven():
     c=NewConfig()
@@ -59,6 +67,7 @@ def test_short_chain_does_not_fill_other_side(cfg,sample):
 def test_even_partial_and_outlier():
     rows=[dict(value=x,qualityEligible=True) for x in (1,2,3,1000)]
     a=summary(rows,7)
+    assert a['rawMean']==251.5
     assert a['rawMedian']==2.5 and a['min']==1 and a['max']==1000 and not a['complete']
 
 def goog_snapshot(sample):

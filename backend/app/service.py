@@ -2,7 +2,8 @@ import json, uuid
 from sqlalchemy import select, func
 from .db import *
 from .models import Config, Snapshot
-from .engine import compute, BASES
+from statistics import mean
+from .engine import compute, BASES, MODEL_VERSION
 
 def config_for(db,monitor): return db.get(RunConfig,monitor.config_id)
 def create_monitor(db,config):
@@ -47,6 +48,18 @@ def save_snapshot(db,s,config_id=None,extra=None):
     db.add(record(AggregateResult,m.id,rc.id,result,snapshot_id=raw.id))
     db.add(ResultOutbox(payload={'type':'result','monitorId':m.id,'snapshotId':raw.id},created_at=nowstr()))
     db.commit(); return result
+
+def display_result(payload):
+    """Older centered snapshots already contain the exact per-strike values."""
+    if payload.get('modelVersion') != MODEL_VERSION:
+        return payload
+    modes = {}
+    for basis, aggregate in payload['modes'].items():
+        if 'rawMean' not in aggregate:
+            values = [row['value'] for row in aggregate['rows'] if row.get('value') is not None]
+            aggregate = {**aggregate, 'rawMean': mean(values) if values else None}
+        modes[basis] = aggregate
+    return {**payload, 'modes': modes}
 
 SUMMARY_SCALARS=('modelVersion','snapshotId','valuationAt','configId','configVersion','feedType','historical','duplicate','status','stockReference','composition','expiration','expiryMode','pricingReferenceAt')
 SUMMARY_MODE_KEYS=('rawMedian','validatedMedian','min','max','rawGapBps')

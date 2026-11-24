@@ -2,7 +2,7 @@
 from datetime import datetime
 from decimal import Decimal
 from math import exp, isfinite
-from statistics import median
+from statistics import mean, median
 from zoneinfo import ZoneInfo
 from .models import Config, Quote, Snapshot
 from .expiry import nearest_expiration, reference_close
@@ -48,7 +48,7 @@ def selected_strikes(contracts,spot,nb,na):
 def summary(rows,requested):
     vals=[r['value'] for r in rows if r['value'] is not None]
     valid=[r['value'] for r in rows if r['qualityEligible']]
-    return dict(rawMedian=median(vals) if vals else None,validatedMedian=median(valid) if valid else None,
+    return dict(rawMean=mean(vals) if vals else None,rawMedian=median(vals) if vals else None,validatedMedian=median(valid) if valid else None,
         validCount=len(valid),computableCount=len(vals),requestedCount=requested,
         complete=len(vals)==requested and requested>0,
         min=min(vals) if vals else None,max=max(vals) if vals else None)

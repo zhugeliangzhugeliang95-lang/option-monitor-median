@@ -7,10 +7,11 @@ from fastapi.responses import StreamingResponse, Response
 from pydantic import ValidationError
 from sqlalchemy import select, func
 from .db import *
+from strike_lab.app import main as strike_lab
 from .models import Config, NewConfig, Snapshot, check_symbol, utcnow
 from .engine import compute, BASES
 from .call_comparison import ComparisonRequest, compare_calls
-from .service import config_for, create_monitor, revise, save_snapshot, summary_columns, summary_row
+from .service import display_result, config_for, create_monitor, revise, save_snapshot, summary_columns, summary_row
 from .providers import provider_for, ProviderError
 from .imports import parse_import
 from . import models
@@ -40,11 +41,16 @@ async def broadcast():
 @asynccontextmanager
 async def lifespan(app):
     task=asyncio.create_task(broadcast())
-    yield
-    task.cancel(); await asyncio.gather(task,return_exceptions=True)
+    try:
+        async with strike_lab.lifespan(strike_lab.app):
+            yield
+    finally:
+        task.cancel()
+        await asyncio.gather(task,return_exceptions=True)
 from .logs import configure as _configure_logging
 _configure_logging()  # uvicorn configures its loggers before importing the app; wrap them with redaction
 app=FastAPI(title='期权反推价格监测台',version='1.0.0',lifespan=lifespan)
+app.mount('/api/strike-lab', strike_lab.app)
 app.add_middleware(CORSMiddleware,allow_origins=LOCAL_ORIGINS,allow_methods=['*'],allow_headers=['*'])
 @app.middleware('http')
 async def local_origin(request,call_next):
@@ -138,7 +144,7 @@ def latest(summary:bool=False):
                 if payload: config_id=payload['configId']
             else:
                 row=db.scalar(select(AggregateResult).where(AggregateResult.monitor_id==m.id).order_by(AggregateResult.id.desc()).limit(1))
-                payload,config_id=(row.payload,row.config_id) if row else (None,None)
+                payload,config_id=(display_result(row.payload),row.config_id) if row else (None,None)
             if payload:
                 out[m.id]={**payload,'oldConfiguration':config_id!=m.config_id}
                 if not summary:
@@ -159,7 +165,7 @@ def history(mid:str,limit:int=200,before:int|None=None,after:int|None=None,summa
         else:
             query=query.order_by(AggregateResult.id.desc()).limit(limit); ordered=lambda rows: list(reversed(rows))
         if summary: return [summary_row(r) for r in ordered(db.execute(query).all())]
-        return [{'id':r.id,**r.payload} for r in ordered(db.scalars(query).all())]
+        return [{'id':r.id,**display_result(r.payload)} for r in ordered(db.scalars(query).all())]
 @app.get('/api/providers/status')
 def status():
     with Session() as db:
